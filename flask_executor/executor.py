@@ -84,6 +84,7 @@ class Executor(InstanceProxy, concurrent.futures._base.Executor):
         self.EXECUTOR_FUTURES_MAX_LENGTH = prefix + 'EXECUTOR_FUTURES_MAX_LENGTH'
         self.EXECUTOR_PROPAGATE_EXCEPTIONS = prefix + 'EXECUTOR_PROPAGATE_EXCEPTIONS'
         self.EXECUTOR_PUSH_APP_CONTEXT = prefix + 'EXECUTOR_PUSH_APP_CONTEXT'
+        self.EXECUTOR_PUSH_REQUEST_CONTEXT = prefix + 'EXECUTOR_PUSH_REQUEST_CONTEXT'
 
         if app is not None:
             self.init_app(app)
@@ -97,6 +98,7 @@ class Executor(InstanceProxy, concurrent.futures._base.Executor):
         """
         app.config.setdefault(self.EXECUTOR_TYPE, 'thread')
         app.config.setdefault(self.EXECUTOR_PUSH_APP_CONTEXT, True)
+        app.config.setdefault(self.EXECUTOR_PUSH_REQUEST_CONTEXT, False)
         futures_max_length = app.config.setdefault(self.EXECUTOR_FUTURES_MAX_LENGTH, None)
         propagate_exceptions = app.config.setdefault(self.EXECUTOR_PROPAGATE_EXCEPTIONS, False)
         if futures_max_length is not None:
@@ -122,7 +124,8 @@ class Executor(InstanceProxy, concurrent.futures._base.Executor):
     def _prepare_fn(self, fn, force_copy=False):
         if isinstance(self._self, concurrent.futures.ThreadPoolExecutor) \
             or force_copy:
-            fn = copy_current_request_context(fn)
+            if current_app.config[self.EXECUTOR_PUSH_REQUEST_CONTEXT]:
+                fn = copy_current_request_context(fn)
             if current_app.config[self.EXECUTOR_PUSH_APP_CONTEXT]:
                 fn = push_app_context(fn)
         return fn
